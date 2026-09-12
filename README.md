@@ -1,6 +1,6 @@
 # DSH SSH Plugin
 
-OpenSSH tools for DeepSeek Harness 0.1.5-rc.2. The bundle runs independently of PI-Desktop and uses public Harness tools, subprocess, approval and sandbox-policy services.
+OpenSSH tools and the `/ssh` connection command for DeepSeek Harness 0.1.5-rc.2. The bundle runs independently of PI-Desktop and uses public Harness tools, commands, subprocess, approval and sandbox-policy services.
 
 ## Install
 
@@ -25,6 +25,10 @@ Use the same `DSH_HOME` for installation and startup. Restart Harness after chan
 
 `exec` takes a shell `command`, returns the exit status and bounded output tails, and defaults to 60 seconds (maximum 300 seconds). A timeout or interrupted transport may leave a remote outcome uncertain. Inspect state before retrying.
 
+## `/ssh`
+
+The Harness Web command adapter discovers `/ssh`. Run `/ssh <host> <absolute-remote-root>` to probe the OpenSSH alias, verify the remote root, and report the remote platform and Python version. `/ssh` and `/ssh help` show the usage. The command does not put credentials in input, and it does not claim to create a Harness workspace.
+
 Optional profile patch:
 
 ```yaml
@@ -39,7 +43,7 @@ File operations reject traversal, symlinks, hard-linked regular files and reserv
 
 Mutating operations refuse read-only sessions and require Harness approval unless the session grants full access. Missing approval infrastructure fails closed. Results and command arguments can be recorded in Harness session logs; keep secrets out of commands and files requested by the model.
 
-Remote tools are explicit. Harness workspace selection, local bash, local filesystem tools and subagents continue to use their own configured local workspace. A transparent whole-session remote workspace backend requires further public API support and is not provided by this bundle.
+Remote tools are explicit. Harness workspace selection, local bash, local filesystem tools and subagents continue to use their own configured local workspace. The official workspace API requires a local absolute path and local filesystem backend; a transparent whole-session SSH workspace is therefore not provided by this bundle. Use the `ssh` tool with the verified `host` and `root` on each remote operation.
 
 ## Validate
 

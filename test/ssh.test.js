@@ -5,12 +5,21 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {parseHosts, validateTarget, runRemote, apply} from '../index.js';
+import {parseHosts, validateTarget, parseSshCommand, formatProbeResult, runRemote, executeSshCommand, apply} from '../index.js';
 
 test('host discovery excludes patterns, negations and option injection', () => {
   assert.deepEqual(parseHosts('Host prod staging\nHost * !private\nHost prod # comment'), ['prod', 'staging']);
   for (const host of ['-oProxyCommand=x', 'host;id', 'host\nother', 'user@host x']) assert.throws(() => validateTarget(host));
   assert.equal(validateTarget('user@server'), 'user@server');
+});
+
+test('/ssh command parses a host and absolute remote root', () => {
+  assert.deepEqual(parseSshCommand(' dev /srv/project '), {kind: 'connect', host: 'dev', root: '/srv/project'});
+  assert.deepEqual(parseSshCommand('help'), {kind: 'help'});
+  assert.deepEqual(parseSshCommand(''), {kind: 'help'});
+  assert.throws(() => parseSshCommand('dev relative/path'), /SSH_ABSOLUTE_ROOT_REQUIRED/);
+  assert.throws(() => parseSshCommand('dev'), /SSH_COMMAND_USAGE/);
+  assert.match(formatProbeResult('dev', '/srv/project', {root: '/srv/project', platform: 'linux', python: [3, 12, 1]}), /SSH connection verified: dev/);
 });
 
 test('remote protocol checks revisions, traversal, symlinks, UTF-8 and timeout', async () => {
@@ -56,8 +65,40 @@ test('DSH subprocess contract uses argv, batch stdin and teardown', async () => 
   assert(terminated);
 });
 
+test('/ssh command probes through the same subprocess contract', async () => {
+  let requested;
+  const ctx = {
+    subprocess: {
+      resolveExecutable: async () => '/usr/bin/ssh',
+      spawn(input) {
+        requested = JSON.parse(input.stdio.stdin.data);
+        return {
+          done: Promise.resolve({exitCode: 0}),
+          collected: {stdout: {readFrom: () => ({text: '{"ok":true,"result":{"root":"/srv/project","platform":"linux","python":[3,12,1]}}', lossy: false})}},
+          terminate() {},
+          waitForExit: async () => true,
+        };
+      },
+    },
+  };
+  const result = await executeSshCommand(ctx, {
+    rawInput: 'dev /srv/project',
+    signal: new AbortController().signal,
+  });
+  assert.equal(requested.action, 'probe');
+  assert.equal(requested.root, '/srv/project');
+  assert.match(result.text, /Python: 3\.12\.1/);
+});
+
 test('tool refuses mutating operations with no approval service', async () => {
   let tool;
-  apply({tools: {register(value) { tool = value; }}, get() { return undefined; }});
+  let command;
+  apply({
+    tools: {register(value) { tool = value; }},
+    commands: {register(value) { command = value; return () => {}; }},
+    get() { return undefined; },
+  });
   await assert.rejects(tool.execute({action: 'exec', host: 'test', root: '/tmp', command: 'true'}, {signal: new AbortController().signal}), /SSH_APPROVAL_REQUIRED/);
+  assert.equal(command.name, 'ssh');
+  assert.equal(command.input.hint, '<host> <absolute-remote-root>');
 });

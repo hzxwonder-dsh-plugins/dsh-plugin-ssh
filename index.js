@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 
 export const name = 'dsh-plugin-ssh';
-export const inject = ['tools', 'subprocess'];
+export const inject = ['tools', 'subprocess', 'commands'];
 const worker = await readFile(new URL('./remote.py', import.meta.url), 'utf8');
 const workerCommand = `python3 -c 'import base64;exec(base64.b64decode("${Buffer.from(worker).toString('base64')}"))'`;
 const actions = ['hosts', 'probe', 'exec', 'list', 'read', 'write'];
+const SSH_COMMAND_USAGE = 'Usage: /ssh <host> <absolute-remote-root>\nExample: /ssh dev /srv/project';
 
 export function validateTarget(host) {
   if (typeof host !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.:@-]{0,253}$/.test(host)) {
@@ -21,6 +22,30 @@ export function parseHosts(text) {
     const match = /^\s*Host\s+(.+?)(?:\s+#.*)?$/i.exec(line);
     return match ? match[1].split(/\s+/).filter(host => /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(host)) : [];
   }))].sort();
+}
+
+export function parseSshCommand(rawInput) {
+  const input = String(rawInput ?? '').trim();
+  if (!input || input.toLowerCase() === 'help') return {kind: 'help'};
+  if (/\r|\n/.test(input)) throw new Error('SSH_COMMAND_USAGE');
+  const match = /^(\S+)\s+(.+)$/.exec(input);
+  if (!match) throw new Error('SSH_COMMAND_USAGE');
+  const host = validateTarget(match[1]);
+  const root = match[2].trim();
+  if (!root.startsWith('/') || root.includes('\0')) throw new Error('SSH_ABSOLUTE_ROOT_REQUIRED');
+  return {kind: 'connect', host, root};
+}
+
+export function formatProbeResult(host, root, result) {
+  const python = Array.isArray(result.python) ? result.python.join('.') : 'unknown';
+  return [
+    `SSH connection verified: ${host}`,
+    `Remote root: ${result.root ?? root}`,
+    `Platform: ${result.platform ?? 'unknown'}`,
+    `Python: ${python}`,
+    'Workspace: not created by this plugin; the official Harness workspace API is local-path-only.',
+    `Use the ssh tool with host="${host}" and root="${result.root ?? root}" for remote operations.`
+  ].join('\n');
 }
 
 export async function runRemote(subprocess, args, exec, config = {}) {
@@ -57,6 +82,24 @@ export async function runRemote(subprocess, args, exec, config = {}) {
   }
 }
 
+export async function executeSshCommand(ctx, invocation, config = {}) {
+  const parsed = parseSshCommand(invocation.rawInput);
+  if (parsed.kind === 'help') return {kind: 'success', text: SSH_COMMAND_USAGE};
+  try {
+    const result = await runRemote(ctx.subprocess, {
+      action: 'probe',
+      host: parsed.host,
+      root: parsed.root,
+      timeoutMs: 30000
+    }, invocation, config);
+    return {kind: 'success', text: formatProbeResult(parsed.host, parsed.root, result)};
+  } catch (error) {
+    if (invocation.signal.aborted) throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    return {kind: 'error', text: `SSH connection failed: ${message}`};
+  }
+}
+
 export function apply(ctx, config = {}) {
   if (config.hosts !== undefined && (!Array.isArray(config.hosts) || config.hosts.some(host => { try { validateTarget(host); return false; } catch { return true; } }))) throw new Error('SSH_INVALID_HOST_ALLOWLIST');
   ctx.tools.register(defineTool({
@@ -88,4 +131,10 @@ export function apply(ctx, config = {}) {
     },
     presentCall: args => ({card: 'generic', title: `SSH ${args.action}${args.host ? ` · ${args.host}` : ''}`, kind: args.action === 'exec' ? 'execute' : args.action === 'write' ? 'edit' : 'read'}),
   }));
+  ctx.commands.register({
+    name: 'ssh',
+    description: 'verify an SSH host and remote root for the ssh tool',
+    input: {hint: '<host> <absolute-remote-root>'},
+    handler: invocation => executeSshCommand(ctx, invocation, config),
+  });
 }
