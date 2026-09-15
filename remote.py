@@ -36,15 +36,19 @@ def read_file(filename):
     fd = os.open(filename, os.O_RDONLY | os.O_NOFOLLOW)
     with os.fdopen(fd, 'rb') as stream:
         info = os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > LIMIT:
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             fail('SSH_INVALID_FILE')
+        if info.st_size > LIMIT:
+            fail('SSH_FILE_TOO_LARGE')
         data = stream.read(LIMIT + 1)
         if len(data) > LIMIT:
             fail('SSH_FILE_TOO_LARGE')
         return data
 
 def run(request):
-    root = os.path.realpath(request['root'])
+    # Saved PI-Desktop-style connections may use ~ as their remote directory;
+    # expansion happens on the remote account, never on the local Host.
+    root = os.path.realpath(os.path.expanduser(request['root']))
     if not os.path.isdir(root):
         fail('SSH_ROOT_REQUIRED')
     action = request['action']
@@ -74,10 +78,21 @@ def run(request):
         with os.scandir(filename) as iterator:
             for entry in iterator:
                 if len(entries) >= 500:
-                    return {'entries': entries, 'truncated': True}
+                    return {'path': filename, 'entries': entries, 'truncated': True}
                 entries.append({'name': entry.name, 'kind': 'symlink' if entry.is_symlink() else 'directory' if entry.is_dir(follow_symlinks=False) else 'file'})
-        return {'entries': entries, 'truncated': False}
+        return {'path': filename, 'entries': entries, 'truncated': False}
     if action == 'read':
+        if request.get('preview') is True:
+            fd = os.open(filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                os.close(fd)
+                fail('SSH_INVALID_FILE')
+            with os.fdopen(fd, 'rb') as stream:
+                data = stream.read(256 * 1024)
+            if b'\0' in data:
+                fail('SSH_BINARY_FILE')
+            return {'content': data.decode('utf-8', errors='replace'), 'size': info.st_size, 'truncated': info.st_size > len(data)}
         data = read_file(filename)
         return {'content': data.decode('utf-8'), 'revision': revision(data)}
     if action == 'write':

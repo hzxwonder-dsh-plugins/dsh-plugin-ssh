@@ -1,14 +1,31 @@
-# SSH Verification Scenarios
+# SSH 验收
 
-1. Install in a clean Harness Web profile; verify the `ssh` schema appears in a new session.
-2. Discover configured literal aliases; confirm wildcard aliases are omitted.
-3. Probe an authorized host with trusted keys and Python 3. List and read a disposable remote root.
-4. Approve a create with `baseRevision: missing`; read and update with the returned revision. Reject stale revisions, traversal, symlink and reserved lock paths.
-5. Run a harmless command returning a nonzero exit code and verify output and status. Test timeout and cancellation, then inspect remote state.
-6. Reject write/exec in read-only mode and without a working approval service. Test a rejected approval.
-7. In the Harness Web composer, type `/ssh` and verify the command appears in discovery with the `<host> <absolute-remote-root>` hint.
-8. Run `/ssh <host> <absolute-remote-root>` against a configured test alias and verify the read-only probe result lists host, resolved root, platform and Python version.
-9. Run `/ssh` or `/ssh help` and verify usage is returned; invalid relative roots are rejected before any SSH process starts.
-10. Confirm the command reports that it does not create a transparent Harness workspace and that subsequent remote work still uses explicit `ssh` tool arguments.
+## 自动化检查
 
-`npm test` executes protocol and adapter fixtures. A live authenticated SSH run is a separate integration check, requiring a user-authorized target.
+在插件目录执行 npm test。覆盖配置导入与选择校验、已有连接保留、认证传递、远程 Python 文件协议、revision 冲突、路径边界、超时、审批、Web 只读限制、工作区映射、会话继承与解除绑定。
+
+在插件集合目录执行 node tests/web-check.mjs。脚本使用临时 DSH_HOME、3298 端口和独立 Chrome，加载实际 Harness Web 客户端。SSH 别名和目录由受控 fixture 提供，浏览器与本机终端使用实际进程。检查并截图：
+
+1. 新建连接、勾选导入及原有连接保留。
+2. 浅色与深色主题、表单间距、390px 宽度和未保存修改确认。
+3. /ssh 打开连接选择，进入目录后绑定当前会话。
+4. 添加远程工作区、隐藏目录切换、新会话继承与页面刷新。
+5. 内置右侧浏览器的鼠标、键盘和工具状态同步，保持一个 Web 页面。
+6. 本机终端连接、执行命令及关闭；页面无未捕获 JavaScript 错误。
+7. 远程选择按钮位于输入框内部工具栏；浅色、深色、右侧栏展开和 390px 宽度下无控件重叠或越界，打开选择器保留草稿，/ssh 可正常使用。
+
+## 真实服务器检查
+
+对有访问权限的测试服务器执行以下检查，使用可清理的测试目录：
+
+1. 在系统终端确认主机指纹、认证方式及 Python 3 可用。
+2. 设置中新增或导入连接，检查默认目录与连接探测结果。
+3. 验证实际需要的 agent、身份文件或密码认证方式。记住密码时检查 Harness 凭据服务，设置和截图中不得出现凭据值。
+4. 添加远程工作区并选择目录，创建后刷新；再创建同工作区会话，确认继承。
+5. 在已有会话输入 /ssh 并切换目录。检查上一级、输入路径、刷新，以及无权限目录报错后的恢复。
+6. 通过右侧文件面板列目录、读取并更新测试文件。旧 revision、越界路径和符号链接应被拒绝。
+7. 使用 ssh exec 运行 pwd，确认远程目标；安装终端插件后检查远程 PTY 的打开、输入和关闭。
+8. 解除当前会话绑定，确认保持解除状态且其他会话不受影响。普通本机工具仍运行于本机。
+9. 检查只读模式、模型变更审批、网络断开与重新连接。
+
+自动化 fixture 验收证明 Web 交互和状态保存；真实 SSH 认证与网络连通性以实际服务器检查为准。
