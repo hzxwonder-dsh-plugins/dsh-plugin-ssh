@@ -4,6 +4,15 @@
 
 为 DeepSeek Harness Web 提供 SSH 连接管理、远程工作区、目录选择和远程文件操作。连接设置、会话输入区和右侧文件面板共享当前远程项目。
 
+## 宿主支持
+
+DeepSeek Harness 分为 Web 端（`dsh web`）与桌面端 DSH Desktop，本插件在两端通用。
+
+- 两端共用同一个包：本仓库只有一份实现，Web 端与桌面端安装的都是 `dsh-plugin-ssh`，没有桌面专用代码分支。
+- 桌面端没有独立仓库：插件仓库只有 [hzxwonder-dsh-plugins/dsh-plugin-ssh](https://github.com/hzxwonder-dsh-plugins/dsh-plugin-ssh)，桌面端宿主仓库是 [anywhere-labs/dsh-desktop](https://github.com/anywhere-labs/dsh-desktop)。
+- 桌面专属能力不进顶层 `inject`：顶层 `inject` 只声明 `tools`、`subprocess`、`commands`。按[桌面端插件规范](https://github.com/anywhere-labs/dsh-desktop/blob/master/docs/plugin-development.md)，两端通用插件必须把桌面专属能力放在 `ctx.get?.('<service>')` 探测之后，只有 Desktop 专用插件才在顶层声明 `desktopProfiles` 与 `desktopPnpm`；本插件同样只把 `settings`、`sessions`、`credentials` 等 service 当作可选能力读取。
+- 验证边界：`npm test` 的单元测试与[验收说明](docs/e2e.md)中的检查面向 Web 端与本机 OpenSSH，覆盖两端共用的实现；本修订没有在 DSH Desktop 实例上做过逐项验收。
+
 ## 安装
 
 需要 Node.js 22.19+、本机 OpenSSH 和远端 Python 3。安装与启动使用同一个 DSH_HOME：

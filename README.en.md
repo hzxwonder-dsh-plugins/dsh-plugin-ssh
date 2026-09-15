@@ -4,6 +4,15 @@
 
 SSH connections, remote workspaces, directory selection, and remote file operations for DeepSeek Harness Web. Settings, the composer, and the right file panel share the active remote project.
 
+## Host support
+
+DeepSeek Harness runs as a Web host (`dsh web`) and as DSH Desktop, and this plugin serves both.
+
+- One package for both hosts: a single implementation in this repository provides `dsh-plugin-ssh` to Web and desktop, with no desktop-specific branch.
+- No separate desktop repository: the plugin repository is [hzxwonder-dsh-plugins/dsh-plugin-ssh](https://github.com/hzxwonder-dsh-plugins/dsh-plugin-ssh), and the desktop host repository is [anywhere-labs/dsh-desktop](https://github.com/anywhere-labs/dsh-desktop).
+- Desktop-only capabilities stay out of the top-level `inject`: it declares `tools`, `subprocess`, and `commands` only. Per the [desktop plugin specification](https://github.com/anywhere-labs/dsh-desktop/blob/master/docs/plugin-development.md), a plugin shared by both hosts must probe desktop-only capabilities behind `ctx.get?.('<service>')`, because only Desktop-only plugins declare `desktopProfiles` and `desktopPnpm` there. This plugin likewise reads services such as `settings`, `sessions`, and `credentials` as optional capabilities.
+- Verification boundary: `npm test` and the checks in the [acceptance notes](docs/e2e.md) target the Web host and local OpenSSH and cover the implementation both hosts share. This revision has no itemized acceptance record on a DSH Desktop instance.
+
 ## Install
 
 Requires Node.js 22.19+, local OpenSSH, and remote Python 3. Use the same DSH_HOME for installation and startup:
