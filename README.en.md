@@ -2,16 +2,15 @@
 
 [中文（主文档）](README.md)
 
-SSH connections, remote workspaces, directory selection, and remote file operations for DeepSeek Harness Web. Settings, the composer, and the right file panel share the active remote project.
+SSH connections, remote workspaces, directory selection, and remote file operations for DeepSeek Harness Desktop. Settings, the composer, and the right file panel share the active remote project.
 
 ## Host support
 
-DeepSeek Harness runs as a Web host (`dsh web`) and as DSH Desktop, and this plugin serves both.
+This repository targets the official [DeepSeek Harness Desktop](https://github.com/deepseek-ai/deepseek-harness). The integrated edition is maintained separately in [DSH Omni](https://github.com/hzxwonder/dsh-omni). Active maintenance covers these two desktop products.
 
-- One package for both hosts: a single implementation in this repository provides `dsh-plugin-ssh` to Web and desktop, with no desktop-specific branch.
-- No separate desktop repository: the plugin repository is [hzxwonder-dsh-plugins/dsh-plugin-ssh](https://github.com/hzxwonder-dsh-plugins/dsh-plugin-ssh), and the desktop host repository is [anywhere-labs/dsh-desktop](https://github.com/anywhere-labs/dsh-desktop).
-- Desktop-only capabilities stay out of the top-level `inject`: it declares `tools`, `subprocess`, and `commands` only. Per the [desktop plugin specification](https://github.com/anywhere-labs/dsh-desktop/blob/master/docs/plugin-development.md), a plugin shared by both hosts must probe desktop-only capabilities behind `ctx.get?.('<service>')`, because only Desktop-only plugins declare `desktopProfiles` and `desktopPnpm` there. This plugin likewise reads services such as `settings`, `sessions`, and `credentials` as optional capabilities.
-- Verification boundary: `npm test` and the checks in the [acceptance notes](docs/e2e.md) target the Web host and local OpenSSH and cover the implementation both hosts share. This revision has no itemized acceptance record on a DSH Desktop instance.
+Compatibility is tracked against the official signed macOS arm64 **0.1.7-rc.2** build. See the [acceptance report and feature comparison](https://github.com/hzxwonder/dsh-omni/blob/main/docs/official-desktop-compatibility.md) for installation, activation, restart and functional results. Installation alone does not establish compatibility.
+
+Validate changes in DSH Omni, update its repository, then adapt and validate in official Desktop before publishing this plugin. Repeat real-device validation after each build.
 
 ## Install
 
