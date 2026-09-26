@@ -2,16 +2,26 @@
 
 [English](README.en.md)
 
-为 DeepSeek Harness Web 提供 SSH 连接管理、远程工作区、目录选择和远程文件操作。连接设置、会话输入区和右侧文件面板共享当前远程项目。
+为 DeepSeek Harness Desktop 提供 SSH 连接管理、远程工作区、目录选择和远程文件操作。连接设置、会话输入区和右侧文件面板共享当前远程项目。
 
 ## 宿主支持
 
-DeepSeek Harness 分为 Web 端（`dsh web`）与桌面端 DSH Desktop，本插件在两端通用。
+本仓库维护 [DeepSeek 官方 Desktop](https://github.com/deepseek-ai/deepseek-harness) 的独立适配插件。
+[DSH Omni](https://github.com/hzxwonder/dsh-omni) 的集成版由其 `vendor/` 单独维护。维护目标为这两个桌面产品，Web 端不再作为维护目标。
 
-- 两端共用同一个包：本仓库只有一份实现，Web 端与桌面端安装的都是 `dsh-plugin-ssh`，没有桌面专用代码分支。
-- 桌面端没有独立仓库：插件仓库只有 [hzxwonder-dsh-plugins/dsh-plugin-ssh](https://github.com/hzxwonder-dsh-plugins/dsh-plugin-ssh)，桌面端宿主仓库是 [anywhere-labs/dsh-desktop](https://github.com/anywhere-labs/dsh-desktop)。
-- 桌面专属能力不进顶层 `inject`：顶层 `inject` 只声明 `tools`、`subprocess`、`commands`。按[桌面端插件规范](https://github.com/anywhere-labs/dsh-desktop/blob/master/docs/plugin-development.md)，两端通用插件必须把桌面专属能力放在 `ctx.get?.('<service>')` 探测之后，只有 Desktop 专用插件才在顶层声明 `desktopProfiles` 与 `desktopPnpm`；本插件同样只把 `settings`、`sessions`、`credentials` 等 service 当作可选能力读取。
-- 验证边界：`npm test` 的单元测试与[验收说明](docs/e2e.md)中的检查面向 Web 端与本机 OpenSSH，覆盖两端共用的实现；本修订没有在 DSH Desktop 实例上做过逐项验收。
+### 官方 Desktop 验收
+
+2026-09-26，macOS arm64，官方签名的 DeepSeek Harness **0.1.7-rc.2**，通过应用插件管理页安装公开版本 **0.1.0**：可安装，Host 显示运行；冷启动失败：客户端等待 settingsScope。当前公开版尚未兼容。
+
+官方有 ssh/fs-ssh/subprocess-ssh/sandbox-ssh 远程执行提供方；本插件增加连接管理、远程目录选择与会话工作区 UI。
+
+[完整验收与官方功能对照](https://github.com/hzxwonder/dsh-omni/blob/main/docs/official-desktop-compatibility.md)。安装成功、组件运行与核心功能验收是不同阶段；兼容范围以实机报告为准。
+
+开发与发布顺序：DSH Omni 开发及实机验收 → 更新 Omni 仓库 → 官方 Desktop 适配及实机验收 → 发布本仓库。每次重新构建后重新实机验证。
+
+### 安装到官方 Desktop
+
+在官方应用中打开“插件 → 添加插件”，输入 `https://github.com/hzxwonder-dsh-plugins/dsh-plugin-ssh`。安装器通过兼容性检查后再启用；按照上面的验收状态决定是否在日常配置使用。
 
 ## 安装
 
