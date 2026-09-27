@@ -23,6 +23,10 @@
 
 在官方应用中打开“插件 → 添加插件”，输入 `https://github.com/hzxwonder-dsh-plugins/dsh-plugin-ssh`。安装器通过兼容性检查后再启用；按照上面的验收状态决定是否在日常配置使用。
 
+### 分发说明
+
+本仓库是面向官方 DeepSeek Harness Desktop 的公开适配版；DSH Omni 中的集成版由 [dsh-omni](https://github.com/hzxwonder/dsh-omni) 的 `vendor/dsh-plugin-ssh` 固定版本提供。两者共享插件能力，但版本和宿主适配分别验收。Web 端不再作为维护目标。官方 Desktop 的安装与功能状态以 [兼容性报告](https://github.com/hzxwonder/dsh-omni/blob/main/docs/official-desktop-compatibility.md) 为准。
+
 ## 安装
 
 需要 Node.js 22.19+、本机 OpenSSH 和远端 Python 3。安装与启动使用同一个 DSH_HOME：

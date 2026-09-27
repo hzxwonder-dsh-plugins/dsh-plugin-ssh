@@ -25,6 +25,10 @@ dsh plugin --profile migration add "file:$PWD"
 
 Keep the file: prefix to install dependencies. Restart Harness after installing or editing the plugin; connection settings apply live. Verify the server fingerprint in a system terminal and establish a trusted known_hosts entry before connecting.
 
+### Distribution
+
+This repository is the public adapter for the official DeepSeek Harness Desktop. DSH Omni ships its integrated copy from the pinned `vendor/dsh-plugin-ssh` snapshot in [dsh-omni](https://github.com/hzxwonder/dsh-omni). The two editions share the plugin capability but are validated against their hosts separately. Web is no longer a maintenance target. See the [compatibility report](https://github.com/hzxwonder/dsh-omni/blob/main/docs/official-desktop-compatibility.md) for the current official Desktop result.
+
 ## Connections
 
 Open Settings → SSH Connections to add a connection or import selected aliases. Discovery reads concrete aliases from ~/.ssh/config and bounded Include files. Import preserves existing names and settings. Loading failures display an error and a retry action.
